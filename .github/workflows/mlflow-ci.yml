@@ -1,1 +1,47 @@
+name: MLflow CI - Model Retraining
 
+# Trigger workflow setiap kali:
+# 1. Ada push yang mengubah isi folder MLProject
+# 2. Dijalankan manual lewat tab Actions (workflow_dispatch)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "MLProject/**"
+  workflow_dispatch: {}
+
+jobs:
+  retrain-model:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MLflow and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow==3.14.0 pandas==2.3.3 scikit-learn==1.8.0
+
+      - name: Run MLflow Project (retrain model)
+        working-directory: MLProject
+        run: |
+          mlflow run . --env-manager=local
+
+      - name: Upload MLflow tracking database as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-tracking-db
+          path: MLProject/mlflow.db
+
+      - name: Upload trained model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model-artifacts
+          path: MLProject/mlruns/
+          if-no-files-found: ignore
